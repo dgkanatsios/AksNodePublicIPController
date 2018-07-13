@@ -36,11 +36,11 @@ func readServicePrincipalDetails() {
 
 	m := f.(map[string]interface{})
 
-	fmt.Println("%s", m["tenantId"])
-	fmt.Println("%s", m["subscriptionId"])
-	fmt.Println("%s", m["aadClientId"])
-	fmt.Println("%s", m["aadClientSecret"])
-	fmt.Println("%s", m["resourceGroup"])
+	fmt.Printf("%s\n", m["tenantId"])
+	fmt.Printf("%s\n", m["subscriptionId"])
+	fmt.Printf("%s\n", m["aadClientId"])
+	fmt.Printf("%s\n", m["aadClientSecret"])
+	fmt.Printf("%s\n", m["resourceGroup"])
 
 }
 
