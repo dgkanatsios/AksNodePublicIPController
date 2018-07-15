@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
-	"io/ioutil"
-	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/dgkanatsios/AksNodePublicIPController/helpers"
 	"github.com/dgkanatsios/AksNodePublicIPController/pkg/signals"
 	informers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -20,33 +17,13 @@ var (
 	kubeconfig string
 )
 
-func readServicePrincipalDetails() {
-	file, e := ioutil.ReadFile("/aks/azure.json")
-	if e != nil {
-		fmt.Printf("File error: %v\n", e)
-		os.Exit(1)
-	}
-	var f interface{}
-	err := json.Unmarshal(file, &f)
-
-	if err != nil {
-		fmt.Printf("Unmarshaling error: %v\n", err)
-		os.Exit(1)
-	}
-
-	m := f.(map[string]interface{})
-
-	fmt.Printf("%s\n", m["tenantId"])
-	fmt.Printf("%s\n", m["subscriptionId"])
-	fmt.Printf("%s\n", m["aadClientId"])
-	fmt.Printf("%s\n", m["aadClientSecret"])
-	fmt.Printf("%s\n", m["resourceGroup"])
-
-}
-
 func main() {
 
-	readServicePrincipalDetails()
+	err := helpers.InitializeServicePrincipalDetails()
+
+	if err != nil {
+		log.Fatalf("Error getting Service Principal credentials: %s", err.Error())
+	}
 
 	flag.Parse()
 
@@ -78,18 +55,3 @@ func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }
-
-/*
-/etc/kubernetes/azure.json is ...
-
-{
-    "cloud":"AzurePublicCloud",
-    "tenantId": "XXX",
-    "subscriptionId": "XXX",
-    "aadClientId": "XXXX",
-    "aadClientSecret": "XXXXX",
-    "resourceGroup": "MC_akslala_akslala_westeurope",
-    "location": "westeurope",
-	...
-}
-*/

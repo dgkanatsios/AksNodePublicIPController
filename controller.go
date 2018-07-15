@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/golang/glog"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+
+	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
 )
 
 const controllerAgentName = "nodes-controller"
@@ -68,7 +70,7 @@ func NewController(
 	// logged for sample-controller types.
 	log.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(log.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
@@ -80,7 +82,7 @@ func NewController(
 		recorder:      recorder,
 	}
 
-	glog.Info("Setting up event handlers")
+	log.Info("Setting up event handlers")
 	// Set up an event handler for when Foo resources change
 
 	// Set up an event handler for when Deployment resources change. This
@@ -224,18 +226,15 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	for _, x := range node.Status.Addresses {
-		if x.Type == corev1.NodeExternalIP {
-			//write down node's Public IP
-			log.Printf("Public IP is %s", x.Address)
+	if !nodeHasPublicIP(node) {
+		//node does not have a Public IP
+		log.Infof("Node with name %s does not have a Public IP, trying to create", node.Name)
+		ctx := context.Background()
+		err := helpers.UpdateVMNIC(ctx, node.Name, "ipconfig-"+node.Name)
+		if err != nil {
+			runtime.HandleError(fmt.Errorf("Error in creating IP %s", err.Error()))
+			return nil
 		}
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
-	if err != nil {
-		return err
 	}
 
 	c.recorder.Event(node, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
@@ -280,4 +279,15 @@ func (c *Controller) enqueueNode(obj interface{}) {
 		return
 	}
 	c.workqueue.AddRateLimited(key)
+}
+
+func nodeHasPublicIP(node *corev1.Node) bool {
+	for _, x := range node.Status.Addresses {
+		if x.Type == corev1.NodeExternalIP {
+			//write down node's Public IP
+			log.Printf("Node %s has a Public IP is %s", node.Name, x.Address)
+			return true
+		}
+	}
+	return false
 }
