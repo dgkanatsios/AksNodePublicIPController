@@ -41,14 +41,14 @@ spec:
     spec:
       serviceAccountName: aksnodepublicipcontroller-sa
       containers:
-      - image: dgkanatsios/aksnodepublicipcontroller:latest
+      - image: dgkanatsios/aksnodepublicipcontroller:0.1
         name: aksnodepublicipcontroller
         volumeMounts:
-          - name: aks
-            mountPath: /aks
+          - name: akssp
+            mountPath: /akssp
         resources: {}
       volumes:
-        - name: aks
+        - name: akssp
           hostPath:
             path: /etc/kubernetes
             type: Directory

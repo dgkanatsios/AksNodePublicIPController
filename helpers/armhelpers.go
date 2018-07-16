@@ -32,7 +32,7 @@ func getNicClient() network.InterfacesClient {
 	return nicClient
 }
 
-func CreatePublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddress, err error) {
+func createPublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddress, err error) {
 	ipClient := getIPClient()
 	future, err := ipClient.CreateOrUpdate(
 		ctx,
@@ -60,14 +60,13 @@ func CreatePublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddr
 	return future.Result(ipClient)
 }
 
-// GetVM gets the specified VM info
-func GetVM(ctx context.Context, vmName string) (compute.VirtualMachine, error) {
+func getVM(ctx context.Context, vmName string) (compute.VirtualMachine, error) {
 	vmClient := getVMClient()
 	return vmClient.Get(ctx, spDetails.ResourceGroup, vmName, compute.InstanceView)
 }
 
-func GetNetworkInterface(ctx context.Context, vmName string) (*network.Interface, error) {
-	vm, err := GetVM(ctx, vmName)
+func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface, error) {
+	vm, err := getVM(ctx, vmName)
 	if err != nil {
 		return nil, err
 	}
@@ -83,18 +82,19 @@ func GetNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 	return &networkInterface, err
 }
 
-func UpdateVMNIC(ctx context.Context, vmName string, ipName string) error {
+// CreateOrUpdateVMPulicIP will create a new Public IP and assign it to the Virtual Machine
+func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error {
 
 	log.Info("Trying to get NIC from the VM")
 
-	nic, err := GetNetworkInterface(ctx, vmName)
+	nic, err := getNetworkInterface(ctx, vmName)
 	if err != nil {
 		return fmt.Errorf("cannot get network interface: %v", err)
 	}
 
 	log.Info("Trying to create the Public IP")
 
-	ip, err := CreatePublicIP(ctx, ipName)
+	ip, err := createPublicIP(ctx, ipName)
 	if err != nil {
 		return fmt.Errorf("cannot create public IP: %v", err)
 	}
@@ -123,6 +123,7 @@ func UpdateVMNIC(ctx context.Context, vmName string, ipName string) error {
 	return nil
 }
 
+// DeletePublicIP deletes the designated Public IP
 func DeletePublicIP(ctx context.Context, ipName string) error {
 	ipClient := getIPClient()
 	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)

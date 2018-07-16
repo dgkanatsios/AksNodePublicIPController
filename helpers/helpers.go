@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 )
 
+// ServicePrincipalDetails contains the Service Principal credentials for the AKS cluster
 type ServicePrincipalDetails struct {
 	TenantID        string
 	SubscriptionID  string
@@ -37,9 +38,11 @@ var spDetails ServicePrincipalDetails
 }
 */
 
+// InitializeServicePrincipalDetails reads the /etc/kubernetes/azure.json file on the host (mounted via hostPath on the Pod)
+// this files contains the credentials for the AKS cluster's Service Principal
 func InitializeServicePrincipalDetails() error {
 
-	file, e := ioutil.ReadFile("/aks/azure.json")
+	file, e := ioutil.ReadFile("/akssp/azure.json")
 	if e != nil {
 		fmt.Printf("File error: %v\n", e)
 		return e
@@ -54,12 +57,12 @@ func InitializeServicePrincipalDetails() error {
 
 	m := f.(map[string]interface{})
 
-	fmt.Printf("%s\n", m["tenantId"])
-	fmt.Printf("%s\n", m["subscriptionId"])
-	fmt.Printf("%s\n", m["aadClientId"])
-	fmt.Printf("%s\n", m["aadClientSecret"])
-	fmt.Printf("%s\n", m["resourceGroup"])
-	fmt.Printf("%s\n", m["location"])
+	// fmt.Printf("%s\n", m["tenantId"])
+	// fmt.Printf("%s\n", m["subscriptionId"])
+	// fmt.Printf("%s\n", m["aadClientId"])
+	// fmt.Printf("%s\n", m["aadClientSecret"])
+	// fmt.Printf("%s\n", m["location"])
+	// fmt.Printf("%s\n", m["resourceGroup"])
 
 	spDetails = ServicePrincipalDetails{
 		TenantID:        m["tenantId"].(string),
@@ -71,4 +74,9 @@ func InitializeServicePrincipalDetails() error {
 	}
 
 	return nil
+}
+
+// GetPublicIPName returns the name of the Public IP resource, which is based on the Node's name
+func GetPublicIPName(vmName string) string {
+	return "ipconfig-" + vmName
 }

@@ -28,12 +28,14 @@ import (
 const controllerAgentName = "nodes-controller"
 
 const (
-	SuccessSynced         = "Synced"
-	ErrResourceExists     = "ErrResourceExists"
-	MessageResourceSynced = "Node synced successfully"
+	successSynced         = "Synced"
+	errResourceExists     = "ErrResourceExists"
+	messageResourceSynced = "Node synced successfully"
+	errorCreatingIP       = "Error creating or updating Public IP"
 )
 
-type Controller struct {
+// NodeController is the Node Controller
+type NodeController struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
@@ -51,10 +53,10 @@ type Controller struct {
 	recorder record.EventRecorder
 }
 
-// NewController returns a new sample controller
-func NewController(
+// NewNodeController returns a new sample controller
+func NewNodeController(
 	kubeclientset kubernetes.Interface,
-	nodeInformer informercorev1.NodeInformer) *Controller {
+	nodeInformer informercorev1.NodeInformer) *NodeController {
 
 	// Create event broadcaster
 	// Add sample-controller types to the default Kubernetes Scheme so Events can be
@@ -65,7 +67,7 @@ func NewController(
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
-	controller := &Controller{
+	controller := &NodeController{
 		kubeclientset: kubeclientset,
 		nodesLister:   nodeInformer.Lister(),
 		nodesSynced:   nodeInformer.Informer().HasSynced,
@@ -103,7 +105,7 @@ func NewController(
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
-func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
+func (c *NodeController) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
@@ -132,14 +134,14 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 // runWorker is a long-running function that will continually call the
 // processNextWorkItem function in order to read and process a message on the
 // workqueue.
-func (c *Controller) runWorker() {
+func (c *NodeController) runWorker() {
 	for c.processNextWorkItem() {
 	}
 }
 
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
-func (c *Controller) processNextWorkItem() bool {
+func (c *NodeController) processNextWorkItem() bool {
 	obj, shutdown := c.workqueue.Get()
 
 	if shutdown {
@@ -193,7 +195,7 @@ func (c *Controller) processNextWorkItem() bool {
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Node resource
 // with the current status of the resource.
-func (c *Controller) syncHandler(key string) error {
+func (c *NodeController) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -218,20 +220,21 @@ func (c *Controller) syncHandler(key string) error {
 
 	if !nodeHasPublicIP(node) {
 		//node does not have a Public IP
-		log.Infof("Node with name %s does not have a Public IP, trying to create", node.Name)
+		log.Infof("Node with name %s does not have a Public IP, trying to create one", node.Name)
 		ctx := context.Background()
-		err := helpers.UpdateVMNIC(ctx, node.Name, "ipconfig-"+node.Name)
+		err := helpers.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
 		if err != nil {
-			runtime.HandleError(fmt.Errorf("Error in creating IP %s", err.Error()))
+			runtime.HandleError(fmt.Errorf("Error in creating IP %s, for Node %s", err.Error(), node.Name))
+			c.recorder.Event(node, corev1.EventTypeWarning, errorCreatingIP, err.Error())
 			return nil
 		}
 	}
 
-	c.recorder.Event(node, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+	c.recorder.Event(node, corev1.EventTypeNormal, successSynced, messageResourceSynced)
 	return nil
 }
 
-func (c *Controller) handleObject(obj interface{}) {
+func (c *NodeController) handleObject(obj interface{}) {
 	var object metav1.Object
 	var ok bool
 	if object, ok = obj.(metav1.Object); !ok {
@@ -249,9 +252,9 @@ func (c *Controller) handleObject(obj interface{}) {
 
 		//deleted Node => Delete Public IP
 		ctx := context.Background()
-		err := helpers.DeletePublicIP(ctx, "ipconfig-"+object.GetName())
+		err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(object.GetName()))
 		if err != nil {
-			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s", object.GetName()))
+			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", object.GetName(), err.Error()))
 			return
 		}
 
@@ -264,7 +267,7 @@ func (c *Controller) handleObject(obj interface{}) {
 // enqueuePod takes a Pod resource and converts it into a namespace/name
 // string which is then put onto the work queue. This method should *not* be
 // passed resources of any type other than Pod.
-func (c *Controller) enqueueNode(obj interface{}) {
+func (c *NodeController) enqueueNode(obj interface{}) {
 
 	var key string
 	var err error
@@ -275,11 +278,12 @@ func (c *Controller) enqueueNode(obj interface{}) {
 	c.workqueue.AddRateLimited(key)
 }
 
+// returns true if the Node has a Public IP
 func nodeHasPublicIP(node *corev1.Node) bool {
 	for _, x := range node.Status.Addresses {
 		if x.Type == corev1.NodeExternalIP {
 			//write down node's Public IP
-			log.Printf("Node %s has a Public IP is %s", node.Name, x.Address)
+			//log.Printf("Node %s has a Public IP: %s", node.Name, x.Address)
 			return true
 		}
 	}

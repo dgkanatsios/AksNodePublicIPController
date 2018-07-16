@@ -42,11 +42,12 @@ func main() {
 
 	sharedInformers := informers.NewSharedInformerFactory(kubeClient, 30*time.Minute)
 
-	controller := NewController(kubeClient, sharedInformers.Core().V1().Nodes())
+	controller := NewNodeController(kubeClient, sharedInformers.Core().V1().Nodes())
 
 	go sharedInformers.Start(stopCh)
 
-	if err = controller.Run(2, stopCh); err != nil {
+	//start one worker
+	if err = controller.Run(1, stopCh); err != nil {
 		log.Fatalf("Error running controller: %s", err.Error())
 	}
 }
