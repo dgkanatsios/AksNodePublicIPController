@@ -10,10 +10,16 @@
 
 ### Deployment
 
-Just run:
+If you have an RBAC enabled cluster, just run:
 
 ```bash
 kubectl create -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy.yaml
+```
+
+else, run:
+
+```bash
+kubectl create -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
 ```
 
 ### Alternatives

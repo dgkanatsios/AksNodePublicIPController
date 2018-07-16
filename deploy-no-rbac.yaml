@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    run: aksnodepublicipcontroller
+  name: aksnodepublicipcontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: aksnodepublicipcontroller
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: aksnodepublicipcontroller
+    spec:
+      containers:
+      - image: dgkanatsios/aksnodepublicipcontroller:0.1
+        name: aksnodepublicipcontroller
+        volumeMounts:
+          - name: akssp
+            mountPath: /akssp
+        resources: {}
+      volumes:
+        - name: akssp
+          hostPath:
+            path: /etc/kubernetes
+            type: Directory
+status: {}

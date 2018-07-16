@@ -22,7 +22,7 @@ var (
 	nativeClientID string
 )
 
-// GetResourceManagementAuthorizer gets an OAuth token for managing resources using the specified grant type.
+// GetResourceManagementAuthorizer gets an OAuth token for managing resources using Service Principal credentials
 func GetResourceManagementAuthorizer() (a autorest.Authorizer, err error) {
 	if armAuthorizer != nil {
 		return armAuthorizer, nil

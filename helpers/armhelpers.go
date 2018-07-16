@@ -43,7 +43,7 @@ func createPublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddr
 			Location: &spDetails.Location,
 			PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
 				PublicIPAddressVersion:   network.IPv4,
-				PublicIPAllocationMethod: network.Dynamic,
+				PublicIPAllocationMethod: network.Dynamic, // IPv4 address created is a dynamic one
 			},
 		},
 	)
