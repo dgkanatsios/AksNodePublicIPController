@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/utils"
 )
 
@@ -60,7 +59,7 @@ func InitializeServicePrincipalDetails() error {
 	fmt.Printf("%s\n", m["tenantId"])
 	fmt.Printf("%s\n", m["subscriptionId"])
 	fmt.Printf("%s\n", m["aadClientId"])
-	//fmt.Printf("%s\n", m["aadClientSecret"])
+	fmt.Printf("%s\n", m["aadClientSecret"])
 	fmt.Printf("%s\n", m["resourceGroup"])
 	fmt.Printf("%s\n", m["location"])
 
@@ -71,11 +70,6 @@ func InitializeServicePrincipalDetails() error {
 		AadClientSecret: m["aadClientSecret"].(string),
 		Location:        m["location"].(string),
 		ResourceGroup:   m["resourceGroup"].(string),
-	}
-
-	oauthConfig, err = adal.NewOAuthConfig(Environment().ActiveDirectoryEndpoint, spDetails.TenantID)
-	if err != nil {
-		return err
 	}
 
 	return nil

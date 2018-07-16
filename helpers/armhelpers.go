@@ -12,7 +12,7 @@ import (
 
 func getIPClient() network.PublicIPAddressesClient {
 	ipClient := network.NewPublicIPAddressesClient(spDetails.SubscriptionID)
-	auth, _ := GetResourceManagementAuthorizer(AuthGrantType())
+	auth, _ := GetResourceManagementAuthorizer()
 	ipClient.Authorizer = auth
 	ipClient.AddToUserAgent(UserAgent())
 	return ipClient
@@ -20,7 +20,7 @@ func getIPClient() network.PublicIPAddressesClient {
 
 func getVMClient() compute.VirtualMachinesClient {
 	vmClient := compute.NewVirtualMachinesClient(spDetails.SubscriptionID)
-	auth, _ := GetResourceManagementAuthorizer(AuthGrantType())
+	auth, _ := GetResourceManagementAuthorizer()
 	vmClient.Authorizer = auth
 	vmClient.AddToUserAgent(UserAgent())
 	return vmClient
@@ -28,7 +28,7 @@ func getVMClient() compute.VirtualMachinesClient {
 
 func getNicClient() network.InterfacesClient {
 	nicClient := network.NewInterfacesClient(spDetails.SubscriptionID)
-	auth, _ := GetResourceManagementAuthorizer(AuthGrantType())
+	auth, _ := GetResourceManagementAuthorizer()
 	nicClient.Authorizer = auth
 	nicClient.AddToUserAgent(UserAgent())
 	return nicClient

@@ -22,7 +22,7 @@ func main() {
 	err := helpers.InitializeServicePrincipalDetails()
 
 	if err != nil {
-		log.Fatalf("Error getting Service Principal credentials: %s", err.Error())
+		log.Fatalf("Error initializing Service Principal credentials: %s", err.Error())
 	}
 
 	flag.Parse()
