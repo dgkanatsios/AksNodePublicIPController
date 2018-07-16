@@ -29,9 +29,10 @@ const controllerAgentName = "nodes-controller"
 
 const (
 	successSynced         = "Synced"
+	successCreatingIP     = "SuccessCreatingIP"
 	errResourceExists     = "ErrResourceExists"
 	messageResourceSynced = "Node synced successfully"
-	errorCreatingIP       = "Error creating or updating Public IP"
+	errorCreatingIP       = "ErrorCreatingIP"
 )
 
 // NodeController is the Node Controller
@@ -180,7 +181,7 @@ func (c *NodeController) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		log.Infof("Successfully synced '%s'", key)
+		//log.Infof("Successfully synced '%s'", key)
 		return nil
 	}(obj)
 
@@ -228,9 +229,10 @@ func (c *NodeController) syncHandler(key string) error {
 			c.recorder.Event(node, corev1.EventTypeWarning, errorCreatingIP, err.Error())
 			return nil
 		}
+		c.recorder.Event(node, corev1.EventTypeNormal, successCreatingIP, fmt.Sprintf("Successfully created IP for Node %s", node.Name))
 	}
 
-	c.recorder.Event(node, corev1.EventTypeNormal, successSynced, messageResourceSynced)
+	//c.recorder.Event(node, corev1.EventTypeNormal, successSynced, messageResourceSynced)
 	return nil
 }
 
@@ -259,7 +261,7 @@ func (c *NodeController) handleObject(obj interface{}) {
 		}
 
 	}
-	log.Infof("Processing object: %s", object.GetName())
+	//log.Infof("Processing object: %s", object.GetName())
 
 	c.enqueueNode(obj)
 }
