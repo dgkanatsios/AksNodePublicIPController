@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/utils"
 )
 
@@ -71,6 +72,9 @@ func InitializeServicePrincipalDetails() error {
 		Location:        m["location"].(string),
 		ResourceGroup:   m["resourceGroup"].(string),
 	}
+
+	oauthConfig, err = adal.NewOAuthConfig(Environment().ActiveDirectoryEndpoint, spDetails.TenantID)
+	return err
 
 	return nil
 }

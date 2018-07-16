@@ -6,7 +6,6 @@
 package helpers
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -59,83 +58,6 @@ var (
 
 	locationOverrideTemplate = "Using location %s on this sample, because this service is not yet available on specified location %s\n"
 )
-
-// ParseArgs picks up shared env vars and flags and finishes parsing flags
-// Other packages should declare their flags then call helpers.ParseArgs()
-func parseArgsInternal() error {
-	err := ParseSubscriptionID()
-	if err != nil {
-		return err
-	}
-
-	err = ParseDeviceFlow()
-	if err != nil {
-		return err
-	}
-
-	// flags are prioritized over env vars,
-	// so read from env vars first, then check flags
-	err = ReadEnvFile()
-	if err != nil {
-		return err
-	}
-
-	servicePrincipalObjectID = os.Getenv("AZURE_SP_OBJECT_ID")
-
-	// flags override envvars
-	if resourceGroupNamePrefix == "" {
-		resourceGroupNamePrefix = os.Getenv("AZURE_RESOURCE_GROUP_PREFIX")
-		flag.StringVar(&resourceGroupNamePrefix, "groupPrefix", GroupPrefix(), "Specify prefix name of resource group for sample resources.")
-	}
-
-	if location == "" {
-		location = os.Getenv("AZURE_LOCATION")
-		if location == "" {
-			location = "westus2" // lots of space, most new features
-		}
-		flag.StringVar(&location, "location", location, "Provide the Azure location where the resources will be be created.")
-	}
-
-	if keepResourcesPtr == nil {
-		keepResources := false
-		if os.Getenv("AZURE_SAMPLES_KEEP_RESOURCES") == "1" {
-			keepResources = true
-		}
-		flag.BoolVar(&keepResources, "keepResources", keepResources, "Keep resources created by samples.")
-		keepResourcesPtr = &keepResources
-	}
-
-	if targetEnv == "" {
-		targetEnv = os.Getenv("AZURE_ENVIRONMENT")
-		if targetEnv == "" {
-			targetEnv = azure.PublicCloud.Name
-		}
-		flag.StringVar(&targetEnv, "environment", targetEnv, "Azure environment.")
-	}
-
-	flag.Parse()
-	return nil
-}
-
-// ParseSubscriptionID gets the subscription id from either an env var, .env file or flag
-// The caller should do flag.Parse()
-func ParseSubscriptionID() error {
-	if subscriptionID != "" {
-		return nil
-	}
-	err := ReadEnvFile()
-	if err != nil {
-		return err
-	}
-
-	subscriptionID = os.Getenv("AZURE_SUBSCRIPTION_ID")
-	flag.StringVar(&subscriptionID, "subscription", subscriptionID, "Subscription to use for deployment.")
-
-	if !(len(subscriptionID) > 0) {
-		return errors.New("subscription ID must be specified in env var, .env file or flag")
-	}
-	return nil
-}
 
 // ParseDeviceFlow parses the auth grant type to be used
 // The caller should do flag.Parse()
