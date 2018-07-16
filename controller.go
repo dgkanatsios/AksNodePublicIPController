@@ -28,18 +28,9 @@ import (
 const controllerAgentName = "nodes-controller"
 
 const (
-	// SuccessSynced is used as part of the Event 'reason' when a Foo is synced
-	SuccessSynced = "Synced"
-	// ErrResourceExists is used as part of the Event 'reason' when a Foo fails
-	// to sync due to a Deployment of the same name already existing.
-	ErrResourceExists = "ErrResourceExists"
-
-	// MessageResourceExists is the message used for Events when a resource
-	// fails to sync due to a Deployment already existing
-	MessageResourceExists = "Resource %q already exists and is not managed by Foo"
-	// MessageResourceSynced is the message used for an Event fired when a Foo
-	// is synced successfully
-	MessageResourceSynced = "Foo synced successfully"
+	SuccessSynced         = "Synced"
+	ErrResourceExists     = "ErrResourceExists"
+	MessageResourceSynced = "Node synced successfully"
 )
 
 type Controller struct {
@@ -83,13 +74,12 @@ func NewController(
 	}
 
 	log.Info("Setting up event handlers")
-	// Set up an event handler for when Foo resources change
+	// Set up an event handler for when Node resources change
 
-	// Set up an event handler for when Deployment resources change. This
-	// handler will lookup the owner of the given Deployment, and if it is
-	// owned by a Foo resource will enqueue that Foo resource for
+	// Set up an event handler for when Node resources change. This
+	// handler will lookup the owner of the given Node, and it will enqueue that Node resource for
 	// processing. This way, we don't need to implement custom logic for
-	// handling Deployment resources. More info on this pattern:
+	// handling Node resources. More info on this pattern:
 	// https://github.com/kubernetes/community/blob/8cafef897a22026d42f5e5bb3f104febe7e29830/contributors/devel/controllers.md
 	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.handleObject,
@@ -97,8 +87,8 @@ func NewController(
 			newNode := new.(*corev1.Node)
 			oldNode := old.(*corev1.Node)
 			if newNode.ResourceVersion == oldNode.ResourceVersion {
-				// Periodic resync will send update events for all known Deployments.
-				// Two different versions of the same Deployment will always have different RVs.
+				// Periodic resync will send update events for all known Nodes.
+				// Two different versions of the same Node will always have different RVs.
 				return
 			}
 			controller.handleObject(new)
@@ -127,7 +117,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	}
 
 	log.Info("Starting workers")
-	// Launch two workers to process Foo resources
+	// Launch two workers to process Node resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -181,7 +171,7 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
-		// Foo resource to be synced.
+		// Node resource to be synced.
 		if err := c.syncHandler(key); err != nil {
 			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
 		}
@@ -201,7 +191,7 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Foo resource
+// converge the two. It then updates the Status block of the Node resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
@@ -241,11 +231,6 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-// handleObject will take any resource implementing metav1.Object and attempt
-// to find the Foo resource that 'owns' it. It does this by looking at the
-// objects metadata.ownerReferences field for an appropriate OwnerReference.
-// It then enqueues that Foo resource to be processed. If the object does not
-// have an appropriate OwnerReference, it will simply be skipped.
 func (c *Controller) handleObject(obj interface{}) {
 	var object metav1.Object
 	var ok bool
@@ -261,6 +246,15 @@ func (c *Controller) handleObject(obj interface{}) {
 			return
 		}
 		log.Infof("Recovered deleted object '%s' from tombstone", object.GetName())
+
+		//deleted Node => Delete Public IP
+		ctx := context.Background()
+		err := helpers.DeletePublicIP(ctx, "ipconfig-"+object.GetName())
+		if err != nil {
+			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s", object.GetName()))
+			return
+		}
+
 	}
 	log.Infof("Processing object: %s", object.GetName())
 
