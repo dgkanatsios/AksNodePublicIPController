@@ -74,7 +74,9 @@ func InitializeServicePrincipalDetails() error {
 	}
 
 	oauthConfig, err = adal.NewOAuthConfig(Environment().ActiveDirectoryEndpoint, spDetails.TenantID)
-	return err
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
