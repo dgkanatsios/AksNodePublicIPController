@@ -62,7 +62,7 @@ func NewNodeController(
 	// Create event broadcaster
 	// Add sample-controller types to the default Kubernetes Scheme so Events can be
 	// logged for sample-controller types.
-	log.Info("Creating event broadcaster")
+	log.Info("Creating event broadcaster for Node controller")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
@@ -76,7 +76,7 @@ func NewNodeController(
 		recorder:      recorder,
 	}
 
-	log.Info("Setting up event handlers")
+	log.Info("Setting up event handlers for Node controller")
 	// Set up an event handler for when Node resources change
 
 	// Set up an event handler for when Node resources change. This
@@ -114,20 +114,20 @@ func (c *NodeController) Run(threadiness int, stopCh <-chan struct{}) error {
 	log.Info("Starting Node controller")
 
 	// Wait for the caches to be synced before starting workers
-	log.Info("Waiting for informer caches to sync")
+	log.Info("Waiting for informer caches to sync for Node controller")
 	if ok := cache.WaitForCacheSync(stopCh, c.nodesSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	log.Info("Starting workers")
+	log.Info("Starting workers for Node controller")
 	// Launch two workers to process Node resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	log.Info("Started workers")
+	log.Info("Started workers for Node controller")
 	<-stopCh
-	log.Info("Shutting down workers")
+	log.Info("Shutting down workers for Node controller")
 
 	return nil
 }

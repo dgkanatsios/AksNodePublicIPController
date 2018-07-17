@@ -85,40 +85,40 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 // CreateOrUpdateVMPulicIP will create a new Public IP and assign it to the Virtual Machine
 func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error {
 
-	log.Info("Trying to get NIC from the VM")
+	log.Infof("Trying to get NIC from the VM %s", vmName)
 
 	nic, err := getNetworkInterface(ctx, vmName)
 	if err != nil {
 		return fmt.Errorf("cannot get network interface: %v", err)
 	}
 
-	log.Info("Trying to create the Public IP")
+	log.Infof("Trying to create the Public IP for Node %s", vmName)
 
 	ip, err := createPublicIP(ctx, ipName)
 	if err != nil {
-		return fmt.Errorf("cannot create public IP: %v", err)
+		return fmt.Errorf("cannot create public IP for Node %s: %v", vmName, err)
 	}
 
-	log.Info("Public IP created")
+	log.Infof("Public IP for Node %s created", vmName)
 
 	(*nic.IPConfigurations)[0].PublicIPAddress = &ip
 
 	nicClient := getNicClient()
 
-	log.Info("Trying to assign the Public IP to the NIC")
+	log.Infof("Trying to assign the Public IP to the NIC for Node %s", vmName)
 
 	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceID(*nic.ID), *nic)
 
 	if err != nil {
-		return fmt.Errorf("cannot update nic: %v", err)
+		return fmt.Errorf("cannot update NIC for Node %s: %v", vmName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, nicClient.Client)
 	if err != nil {
-		return fmt.Errorf("cannot get nic create or update future response: %v", err)
+		return fmt.Errorf("cannot get NIC create or update future response for Node %s: %v", vmName, err)
 	}
 
-	log.Info("NIC successfully updated")
+	log.Infof("NIC for Node %s successfully updated", vmName)
 
 	return nil
 }
@@ -128,15 +128,15 @@ func DeletePublicIP(ctx context.Context, ipName string) error {
 	ipClient := getIPClient()
 	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
 	if err != nil {
-		return fmt.Errorf("cannot create public ip address: %v", err)
+		return fmt.Errorf("cannot delete public ip address %s: %v", ipName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, ipClient.Client)
 	if err != nil {
-		return fmt.Errorf("cannot get public ip address create or update future response: %v", err)
+		return fmt.Errorf("cannot get public ip address %s create or update future response: %v", ipName, err)
 	}
 
-	log.Info("IP successfully deleted")
+	log.Infof("IP %s successfully deleted", ipName)
 
 	return nil
 }
