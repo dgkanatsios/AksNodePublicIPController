@@ -40,14 +40,14 @@ func main() {
 		log.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	sharedInformers := informers.NewSharedInformerFactory(kubeClient, 30*time.Minute)
+	sharedInformers := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
 
 	controller := NewNodeController(kubeClient, sharedInformers.Core().V1().Nodes())
 
 	go sharedInformers.Start(stopCh)
 
-	//start one worker
-	if err = controller.Run(1, stopCh); err != nil {
+	//start two workers
+	if err = controller.Run(2, stopCh); err != nil {
 		log.Fatalf("Error running controller: %s", err.Error())
 	}
 }
