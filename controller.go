@@ -254,11 +254,13 @@ func (c *NodeController) handleObject(obj interface{}) {
 
 		//deleted Node => Delete Public IP
 		ctx := context.Background()
+		log.Infof("Node with name %s has been deleted, trying to delete its Public IP", object.GetName())
 		err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(object.GetName()))
 		if err != nil {
 			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", object.GetName(), err.Error()))
 			return
 		}
+		log.Infof("Successfully deleted Public IP for Node with name %s", object.GetName())
 
 	}
 	//log.Infof("Processing object: %s", object.GetName())
