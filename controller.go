@@ -213,9 +213,9 @@ func (c *NodeController) syncHandler(key string) error {
 		// processing.
 		if errors.IsNotFound(err) {
 
-			deleteNode(name)
-
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
+			deletePublicIP(name)
+
 			return nil
 		}
 
@@ -256,15 +256,15 @@ func (c *NodeController) handleObject(obj interface{}) {
 		log.Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 
 		//deleted Node => Delete Public IP
-		deleteNode(object.GetName())
+		deletePublicIP(object.GetName())
 
 	}
 	//log.Infof("Processing object: %s", object.GetName())
 
-	c.enqueueNode(obj)
+	c.enqueueNode(object)
 }
 
-func deleteNode(nodeName string) {
+func deletePublicIP(nodeName string) {
 	ctx := context.Background()
 	log.Infof("Node with name %s has been deleted, trying to delete its Public IP", nodeName)
 	err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
