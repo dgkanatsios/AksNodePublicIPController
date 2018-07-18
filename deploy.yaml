@@ -41,7 +41,7 @@ spec:
     spec:
       serviceAccountName: aksnodepublicipcontroller-sa
       containers:
-      - image: dgkanatsios/aksnodepublicipcontroller:0.2
+      - image: dgkanatsios/aksnodepublicipcontroller:0.2.1
         name: aksnodepublicipcontroller
         volumeMounts:
           - name: akssp

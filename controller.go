@@ -209,9 +209,12 @@ func (c *NodeController) syncHandler(key string) error {
 	node, err := c.nodesLister.Get(name)
 
 	if err != nil {
-		// The Node resource may no longer exist, in which case we stop
+		// The Node resource may no longer exist, in which case we delete the Public IP and stop
 		// processing.
 		if errors.IsNotFound(err) {
+
+			deleteNode(name)
+
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
 			return nil
 		}
@@ -253,19 +256,23 @@ func (c *NodeController) handleObject(obj interface{}) {
 		log.Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 
 		//deleted Node => Delete Public IP
-		ctx := context.Background()
-		log.Infof("Node with name %s has been deleted, trying to delete its Public IP", object.GetName())
-		err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(object.GetName()))
-		if err != nil {
-			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", object.GetName(), err.Error()))
-			return
-		}
-		log.Infof("Successfully deleted Public IP for Node with name %s", object.GetName())
+		deleteNode(object.GetName())
 
 	}
 	//log.Infof("Processing object: %s", object.GetName())
 
 	c.enqueueNode(obj)
+}
+
+func deleteNode(nodeName string) {
+	ctx := context.Background()
+	log.Infof("Node with name %s has been deleted, trying to delete its Public IP", nodeName)
+	err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, err.Error()))
+		return
+	}
+	log.Infof("Successfully deleted Public IP for Node with name %s", nodeName)
 }
 
 // enqueuePod takes a Pod resource and converts it into a namespace/name
