@@ -143,8 +143,28 @@ func DeletePublicIP(ctx context.Context, ipName string) error {
 
 // DisassociatePublicIPForNode will set the VM with vmName Public IP to nil
 func DisassociatePublicIPForNode(ctx context.Context, vmName string) error {
+	ipClient := getIPClient()
+	ipAddress, err := ipClient.Get(ctx, spDetails.ResourceGroup, GetPublicIPName(vmName), "")
+	if err != nil {
+		return fmt.Errorf("cannot get IP Address: %v", err)
+	}
+
+	var nicID string
+	if ipAddress.IPConfiguration != nil {
+		ipConfiguration := *ipAddress.IPConfiguration.ID
+		///subscriptions/X/resourceGroups/Y/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-X/ipConfigurations/ipconfig1
+
+		nicID = getNICIDFromIPConfiguration(ipConfiguration)
+	} else {
+		// IPConfiguration is nil => this IP address is already disassociated
+		return nil
+	}
+
+	nicClient := getNicClient()
+
 	// get the NIC
-	nic, err := getNetworkInterface(ctx, vmName)
+	nic, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicID, "")
+
 	if err != nil {
 		return fmt.Errorf("cannot get network interface: %v", err)
 	}
@@ -152,10 +172,8 @@ func DisassociatePublicIPForNode(ctx context.Context, vmName string) error {
 	// set its Public IP to nil
 	(*nic.IPConfigurations)[0].PublicIPAddress = nil
 
-	nicClient := getNicClient()
-
 	// update it
-	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceID(*nic.ID), *nic)
+	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceID(*nic.ID), nic)
 
 	if err != nil {
 		return fmt.Errorf("cannot update NIC for Node %s: %v", vmName, err)
@@ -175,4 +193,10 @@ func DisassociatePublicIPForNode(ctx context.Context, vmName string) error {
 func getResourceID(fullID string) string {
 	parts := strings.Split(fullID, "/")
 	return parts[len(parts)-1]
+}
+
+func getNICIDFromIPConfiguration(ipConfig string) string {
+	///subscriptions/X/resourceGroups/Y/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-X/ipConfigurations/ipconfig1
+	parts := strings.Split(ipConfig, "/")
+	return parts[len(parts)-3]
 }
