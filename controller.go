@@ -125,7 +125,7 @@ func (c *NodeController) Run(threadiness int, stopCh <-chan struct{}) error {
 	}
 
 	log.Info("Starting workers for Node controller")
-	// Launch two workers to process Node resources
+	// Launch workers to process Node resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -272,7 +272,7 @@ func deletePublicIPForNode(nodeName string) error {
 	err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
 
 	// there is a chance that NIC is still alive so IP Address is still associated and we'll get an error
-	// this is the error message
+	// this is the error message:
 	// Failure sending request: StatusCode=0 -- Original Error: autorest/azure: Service returned an error. Status=400 Code="PublicIPAddressCannotBeDeleted" Message="Public IP address /subscriptions/XXX/resourceGroups/XXX/providers/Microsoft.Network/publicIPAddresses/XXX can not be deleted since it is still allocated
 	if err != nil && strings.Contains(err.Error(), `Code="PublicIPAddressCannotBeDeleted"`) {
 		// try to disassociate the Public IP
@@ -280,7 +280,7 @@ func deletePublicIPForNode(nodeName string) error {
 		if errDis != nil {
 			runtime.HandleError(fmt.Errorf("Cannot disassociate Public IP for node %s due to error %s", nodeName, errDis.Error()))
 		}
-		// regardless of whether we have an error in disassociating, we should try and delete the Public IP again
+		// regardless of whether we get an error in disassociating, we should try and delete the Public IP again
 		errDeleteIP := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
 		if errDeleteIP != nil {
 			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, errDeleteIP.Error()))

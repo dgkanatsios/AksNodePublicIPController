@@ -72,13 +72,13 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 	}
 
 	//this will be something like /subscriptions/6bd0e514-c783-4dac-92d2-6788744eee7a/resourceGroups/MC_akslala_akslala_westeurope/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-0
-	nicIDFullName := &(*vm.NetworkProfile.NetworkInterfaces)[0].ID
+	nicFullName := &(*vm.NetworkProfile.NetworkInterfaces)[0].ID
 
-	nicID := getResourceName(**nicIDFullName)
+	nicName := getResourceName(**nicFullName)
 
 	nicClient := getNicClient()
 
-	networkInterface, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicID, "")
+	networkInterface, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicName, "")
 	return &networkInterface, err
 }
 
@@ -101,6 +101,7 @@ func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) 
 
 	log.Infof("Public IP for Node %s created", vmName)
 
+	// set this IP Adress to NIC's IP configuration
 	(*nic.IPConfigurations)[0].PublicIPAddress = &ip
 
 	nicClient := getNicClient()
@@ -149,12 +150,13 @@ func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 		return fmt.Errorf("Cannot get IP Address: %v", err)
 	}
 
-	var nicID string
+	var nicName string
 	if ipAddress.IPConfiguration != nil {
 		ipConfiguration := *ipAddress.IPConfiguration.ID
+		//ipConfiguration has a value similar to:
 		///subscriptions/X/resourceGroups/Y/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-X/ipConfigurations/ipconfig1
 
-		nicID = getNICNameFromIPConfiguration(ipConfiguration)
+		nicName = getNICNameFromIPConfiguration(ipConfiguration)
 	} else {
 		// IPConfiguration is nil => this IP address is already disassociated
 		return nil
@@ -163,7 +165,7 @@ func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	nicClient := getNicClient()
 
 	// get the NIC
-	nic, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicID, "")
+	nic, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicName, "")
 
 	if err != nil {
 		return fmt.Errorf("Cannot get NIC for Node %s: %v", nodeName, err)
