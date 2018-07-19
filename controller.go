@@ -31,6 +31,7 @@ const controllerAgentName = "nodes-controller"
 const (
 	successSynced         = "Synced"
 	successCreatingIP     = "SuccessCreatingIP"
+	successDeletingIP     = "SuccessDeletingIP"
 	errResourceExists     = "ErrResourceExists"
 	messageResourceSynced = "Node synced successfully"
 	errorCreatingIP       = "ErrorCreatingIP"
@@ -218,7 +219,7 @@ func (c *NodeController) syncHandler(key string) error {
 
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
 			deletePublicIPForNode(name)
-
+			c.recorder.Event(node, corev1.EventTypeNormal, successDeletingIP, fmt.Sprintf("Successfully deleted IP for Node %s", node.Name))
 			return nil
 		}
 
