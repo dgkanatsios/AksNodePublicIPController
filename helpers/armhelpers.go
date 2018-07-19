@@ -49,12 +49,12 @@ func createPublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddr
 	)
 
 	if err != nil {
-		return ip, fmt.Errorf("cannot create public ip address: %v", err)
+		return ip, fmt.Errorf("Cannot create Public IP address: %v", err)
 	}
 
 	err = future.WaitForCompletion(ctx, ipClient.Client)
 	if err != nil {
-		return ip, fmt.Errorf("cannot get public ip address create or update future response: %v", err)
+		return ip, fmt.Errorf("Cannot get Public IP address CreateOrUpdate method response: %v", err)
 	}
 
 	return future.Result(ipClient)
@@ -74,7 +74,7 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 	//this will be something like /subscriptions/6bd0e514-c783-4dac-92d2-6788744eee7a/resourceGroups/MC_akslala_akslala_westeurope/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-0
 	nicIDFullName := &(*vm.NetworkProfile.NetworkInterfaces)[0].ID
 
-	nicID := getResourceID(**nicIDFullName)
+	nicID := getResourceName(**nicIDFullName)
 
 	nicClient := getNicClient()
 
@@ -96,7 +96,7 @@ func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) 
 
 	ip, err := createPublicIP(ctx, ipName)
 	if err != nil {
-		return fmt.Errorf("cannot create public IP for Node %s: %v", vmName, err)
+		return fmt.Errorf("Cannot create Public IP for Node %s: %v", vmName, err)
 	}
 
 	log.Infof("Public IP for Node %s created", vmName)
@@ -107,15 +107,15 @@ func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) 
 
 	log.Infof("Trying to assign the Public IP to the NIC for Node %s", vmName)
 
-	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceID(*nic.ID), *nic)
+	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), *nic)
 
 	if err != nil {
-		return fmt.Errorf("cannot update NIC for Node %s: %v", vmName, err)
+		return fmt.Errorf("Cannot update NIC for Node %s: %v", vmName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, nicClient.Client)
 	if err != nil {
-		return fmt.Errorf("cannot get NIC create or update future response for Node %s: %v", vmName, err)
+		return fmt.Errorf("Cannot get NIC CreateOrUpdate response for Node %s: %v", vmName, err)
 	}
 
 	log.Infof("NIC for Node %s successfully updated", vmName)
@@ -128,12 +128,12 @@ func DeletePublicIP(ctx context.Context, ipName string) error {
 	ipClient := getIPClient()
 	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
 	if err != nil {
-		return fmt.Errorf("cannot delete public ip address %s: %v", ipName, err)
+		return fmt.Errorf("Cannot delete Public IP address %s: %v", ipName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, ipClient.Client)
 	if err != nil {
-		return fmt.Errorf("cannot get public ip address %s create or update method's future response: %v", ipName, err)
+		return fmt.Errorf("Cannot get public ip address %s CreateOrUpdate method's response: %v", ipName, err)
 	}
 
 	log.Infof("IP %s successfully deleted", ipName)
@@ -141,12 +141,12 @@ func DeletePublicIP(ctx context.Context, ipName string) error {
 	return nil
 }
 
-// DisassociatePublicIPForNode will set the VM with vmName Public IP to nil
-func DisassociatePublicIPForNode(ctx context.Context, vmName string) error {
+// DisassociatePublicIPForNode will remove the Public IP address association from the VM's NIC
+func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	ipClient := getIPClient()
-	ipAddress, err := ipClient.Get(ctx, spDetails.ResourceGroup, GetPublicIPName(vmName), "")
+	ipAddress, err := ipClient.Get(ctx, spDetails.ResourceGroup, GetPublicIPName(nodeName), "")
 	if err != nil {
-		return fmt.Errorf("cannot get IP Address: %v", err)
+		return fmt.Errorf("Cannot get IP Address: %v", err)
 	}
 
 	var nicID string
@@ -154,7 +154,7 @@ func DisassociatePublicIPForNode(ctx context.Context, vmName string) error {
 		ipConfiguration := *ipAddress.IPConfiguration.ID
 		///subscriptions/X/resourceGroups/Y/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-X/ipConfigurations/ipconfig1
 
-		nicID = getNICIDFromIPConfiguration(ipConfiguration)
+		nicID = getNICNameFromIPConfiguration(ipConfiguration)
 	} else {
 		// IPConfiguration is nil => this IP address is already disassociated
 		return nil
@@ -166,36 +166,50 @@ func DisassociatePublicIPForNode(ctx context.Context, vmName string) error {
 	nic, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicID, "")
 
 	if err != nil {
-		return fmt.Errorf("cannot get network interface: %v", err)
+		return fmt.Errorf("Cannot get NIC for Node %s: %v", nodeName, err)
 	}
 
 	// set its Public IP to nil
 	(*nic.IPConfigurations)[0].PublicIPAddress = nil
 
-	// update it
-	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceID(*nic.ID), nic)
+	// update the NIC so it has a nil Public IP
+	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), nic)
 
 	if err != nil {
-		return fmt.Errorf("cannot update NIC for Node %s: %v", vmName, err)
+		return fmt.Errorf("Cannot update NIC for Node %s: %v", nodeName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, nicClient.Client)
 	if err != nil {
-		return fmt.Errorf("cannot get NIC create or update future response for Node %s: %v", vmName, err)
+		return fmt.Errorf("Cannot get NIC CreateOrUpdate response for Node %s: %v", nodeName, err)
+	}
+
+	// there is a chance that after the scale-in operation completes, the NIC will still be alive
+	// This may happen due to a race condition between AKS calling Delete on the NIC and our code that
+	// calls CreateOrUpdate
+	// to make sure NIC gets removed, we'll just call delete on its instance
+	futureDelete, err := nicClient.Delete(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID))
+	if err != nil {
+		return fmt.Errorf("Cannot delete NIC for Node %s: %v. NIC may have already been deleted", nodeName, err)
+	}
+
+	err = futureDelete.WaitForCompletion(ctx, nicClient.Client)
+	if err != nil {
+		return fmt.Errorf("Cannot get NIC Delete response for Node %s: %v. NIC may have already been deleted", nodeName, err)
 	}
 
 	return nil
 }
 
-// getResourceID accepts a string of type
+// getResourceName accepts a string of type
 // /subscriptions/A/resourceGroups/B/providers/Microsoft.Network/publicIPAddresses/ipconfig-aks-nodepool1-X
 // will return just the ID, i.e. ipconfig-aks-nodepool1-X
-func getResourceID(fullID string) string {
+func getResourceName(fullID string) string {
 	parts := strings.Split(fullID, "/")
 	return parts[len(parts)-1]
 }
 
-func getNICIDFromIPConfiguration(ipConfig string) string {
+func getNICNameFromIPConfiguration(ipConfig string) string {
 	///subscriptions/X/resourceGroups/Y/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-X/ipConfigurations/ipconfig1
 	parts := strings.Split(ipConfig, "/")
 	return parts[len(parts)-3]
