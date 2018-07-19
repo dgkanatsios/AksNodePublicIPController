@@ -256,10 +256,6 @@ func (c *NodeController) handleObject(obj interface{}) {
 			return
 		}
 		log.Infof("Recovered deleted object '%s' from tombstone", object.GetName())
-
-		//deleted Node => Delete Public IP
-		deletePublicIPForNode(object.GetName())
-
 	}
 	//log.Infof("Processing object: %s", object.GetName())
 
