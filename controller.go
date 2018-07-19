@@ -35,6 +35,7 @@ const (
 	errResourceExists     = "ErrResourceExists"
 	messageResourceSynced = "Node synced successfully"
 	errorCreatingIP       = "ErrorCreatingIP"
+	errorDeletingIP       = "ErrorDeletingIP"
 )
 
 var ctx = context.Background()
@@ -216,14 +217,17 @@ func (c *NodeController) syncHandler(key string) error {
 		// The Node resource may no longer exist, in which case we delete the Public IP and stop
 		// processing.
 		if errors.IsNotFound(err) {
-
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
-			deletePublicIPForNode(name)
+			errDelete := deletePublicIPForNode(name)
+			if errDelete != nil {
+				c.recorder.Event(node, corev1.EventTypeWarning, errorDeletingIP, fmt.Sprintf("Error deleting IP for Node %s: %v", node.Name, errDelete.Error()))
+				return errDelete
+			}
 			c.recorder.Event(node, corev1.EventTypeNormal, successDeletingIP, fmt.Sprintf("Successfully deleted IP for Node %s", node.Name))
 			return nil
 		}
 
-		return err
+		return err // cannot list nodes
 	}
 
 	if !nodeHasPublicIP(node) {
@@ -263,7 +267,7 @@ func (c *NodeController) handleObject(obj interface{}) {
 	c.enqueueNode(object)
 }
 
-func deletePublicIPForNode(nodeName string) {
+func deletePublicIPForNode(nodeName string) error {
 	log.Infof("Node with name %s has been deleted, trying to delete its Public IP", nodeName)
 	err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
 
@@ -277,18 +281,19 @@ func deletePublicIPForNode(nodeName string) {
 			runtime.HandleError(fmt.Errorf("Cannot disassociate Public IP for node %s due to error %s", nodeName, errDis.Error()))
 		}
 		// regardless of whether we have an error in disassociating, we should try and delete the Public IP again
-		err2 := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
-		if err2 != nil {
-			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, err2.Error()))
-			return
+		errDeleteIP := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
+		if errDeleteIP != nil {
+			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, errDeleteIP.Error()))
+			return errDeleteIP
 		}
 
 	} else if err != nil {
 		runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, err.Error()))
-		return
+		return err
 	}
 
 	log.Infof("Successfully deleted Public IP for Node with name %s", nodeName)
+	return nil
 }
 
 // enqueuePod takes a Pod resource and converts it into a namespace/name
