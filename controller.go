@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -34,6 +35,8 @@ const (
 	messageResourceSynced = "Node synced successfully"
 	errorCreatingIP       = "ErrorCreatingIP"
 )
+
+var ctx = context.Background()
 
 // NodeController is the Node Controller
 type NodeController struct {
@@ -214,7 +217,7 @@ func (c *NodeController) syncHandler(key string) error {
 		if errors.IsNotFound(err) {
 
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
-			deletePublicIP(name)
+			deletePublicIPForNode(name)
 
 			return nil
 		}
@@ -225,7 +228,6 @@ func (c *NodeController) syncHandler(key string) error {
 	if !nodeHasPublicIP(node) {
 		//node does not have a Public IP
 		log.Infof("Node with name %s does not have a Public IP, trying to create one", node.Name)
-		ctx := context.Background()
 		err := helpers.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
 		if err != nil {
 			runtime.HandleError(fmt.Errorf("Error in creating IP %s, for Node %s", err.Error(), node.Name))
@@ -256,7 +258,7 @@ func (c *NodeController) handleObject(obj interface{}) {
 		log.Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 
 		//deleted Node => Delete Public IP
-		deletePublicIP(object.GetName())
+		deletePublicIPForNode(object.GetName())
 
 	}
 	//log.Infof("Processing object: %s", object.GetName())
@@ -264,14 +266,31 @@ func (c *NodeController) handleObject(obj interface{}) {
 	c.enqueueNode(object)
 }
 
-func deletePublicIP(nodeName string) {
-	ctx := context.Background()
+func deletePublicIPForNode(nodeName string) {
 	log.Infof("Node with name %s has been deleted, trying to delete its Public IP", nodeName)
 	err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
-	if err != nil {
+
+	// there is a chance that NIC is still alive so IP Address is still associated and we'll get an error
+	// this is the error message
+	// Failure sending request: StatusCode=0 -- Original Error: autorest/azure: Service returned an error. Status=400 Code="PublicIPAddressCannotBeDeleted" Message="Public IP address /subscriptions/XXX/resourceGroups/XXX/providers/Microsoft.Network/publicIPAddresses/XXX can not be deleted since it is still allocated
+	if err != nil && strings.Contains(err.Error(), `Code="PublicIPAddressCannotBeDeleted"`) {
+		// try to disassociate the Public IP
+		errDis := helpers.DisassociatePublicIPForNode(ctx, nodeName)
+		if errDis != nil {
+			runtime.HandleError(fmt.Errorf("Cannot disassociate Public IP for node %s due to error %s", nodeName, errDis.Error()))
+		}
+		// regardless of whether we have an error in disassociating, we should try and delete the Public IP again
+		err2 := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
+		if err2 != nil {
+			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, err2.Error()))
+			return
+		}
+
+	} else if err != nil {
 		runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, err.Error()))
 		return
 	}
+
 	log.Infof("Successfully deleted Public IP for Node with name %s", nodeName)
 }
 

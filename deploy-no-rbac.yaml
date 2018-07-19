@@ -18,7 +18,7 @@ spec:
         run: aksnodepublicipcontroller
     spec:
       containers:
-      - image: dgkanatsios/aksnodepublicipcontroller:0.2.2
+      - image: dgkanatsios/aksnodepublicipcontroller:0.2.3
         name: aksnodepublicipcontroller
         volumeMounts:
           - name: akssp
