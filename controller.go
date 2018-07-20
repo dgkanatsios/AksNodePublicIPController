@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
 )
 
@@ -220,10 +219,10 @@ func (c *NodeController) syncHandler(key string) error {
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
 			errDelete := deletePublicIPForNode(name)
 			if errDelete != nil {
-				log.Infof("Error deleting IP for Node %s: %v", key, errDelete.Error()))
+				log.Infof("Error deleting IP for Node %s: %v", key, errDelete.Error())
 				return errDelete
 			}
-			log.Infof("Successfully deleted IP for Node %s", key))
+			log.Infof("Successfully deleted IP for Node %s", key)
 			return nil
 		}
 
