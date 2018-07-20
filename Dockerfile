@@ -12,4 +12,4 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /build/app .
 CMD ["./app"]
-LABEL Name=aksnodepublicipcontroller Version=0.2.6
+LABEL Name=aksnodepublicipcontroller Version=0.2.7
