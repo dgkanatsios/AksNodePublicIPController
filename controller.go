@@ -19,10 +19,10 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listercorev1 "k8s.io/client-go/listers/core/v1"
 
+	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
 )
 
 const controllerAgentName = "nodes-controller"
@@ -216,13 +216,13 @@ func (c *NodeController) syncHandler(key string) error {
 		// The Node resource may no longer exist, in which case we delete the Public IP and stop
 		// processing.
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", key))
+			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", name))
 			errDelete := deletePublicIPForNode(name)
 			if errDelete != nil {
-				log.Infof("Error deleting IP for Node %s: %v", key, errDelete.Error())
+				log.Infof("Error deleting IP for Node %s: %v", name, errDelete.Error())
 				return errDelete
 			}
-			log.Infof("Successfully deleted IP for Node %s", key)
+			log.Infof("Successfully deleted IP for Node %s", name)
 			return nil
 		}
 
