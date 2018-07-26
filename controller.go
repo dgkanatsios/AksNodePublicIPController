@@ -66,7 +66,7 @@ func NewNodeController(
 	// Create event broadcaster
 	// Add sample-controller types to the default Kubernetes Scheme so Events can be
 	// logged for sample-controller types.
-	log.Info("Creating event broadcaster for Node controller")
+	log.Info("Creating event broadcaster for Node-Public IP controller")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
@@ -80,7 +80,7 @@ func NewNodeController(
 		recorder:      recorder,
 	}
 
-	log.Info("Setting up event handlers for Node controller")
+	log.Info("Setting up event handlers for Node-Public IP controller")
 	// Set up an event handler for when Node resources change
 
 	// Set up an event handler for when Node resources change. This
@@ -115,23 +115,23 @@ func (c *NodeController) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	log.Info("Starting Node controller")
+	log.Info("Starting Node-Public IP controller")
 
 	// Wait for the caches to be synced before starting workers
-	log.Info("Waiting for informer caches to sync for Node controller")
+	log.Info("Waiting for informer caches to sync for Node-Public IP controller")
 	if ok := cache.WaitForCacheSync(stopCh, c.nodesSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
+		return fmt.Errorf("failed to wait for caches to sync for Node-Public IP controller")
 	}
 
-	log.Info("Starting workers for Node controller")
+	log.Info("Starting workers for Node-Public IP controller")
 	// Launch workers to process Node resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	log.Info("Started workers for Node controller")
+	log.Info("Started workers for Node-Public IP controller")
 	<-stopCh
-	log.Info("Shutting down workers for Node controller")
+	log.Info("Shutting down workers for Node-Public IP controller")
 
 	return nil
 }
@@ -216,7 +216,7 @@ func (c *NodeController) syncHandler(key string) error {
 		// The Node resource may no longer exist, in which case we delete the Public IP and stop
 		// processing.
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists", name))
+			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists in Node-Public IP controller", name))
 			errDelete := deletePublicIPForNode(name)
 			if errDelete != nil {
 				log.Infof("Error deleting IP for Node %s: %v", name, errDelete.Error())

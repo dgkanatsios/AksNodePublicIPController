@@ -49,12 +49,12 @@ func createPublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddr
 	)
 
 	if err != nil {
-		return ip, fmt.Errorf("Cannot create Public IP address: %v", err)
+		return ip, fmt.Errorf("cannot create Public IP address: %v", err)
 	}
 
 	err = future.WaitForCompletion(ctx, ipClient.Client)
 	if err != nil {
-		return ip, fmt.Errorf("Cannot get Public IP address CreateOrUpdate method response: %v", err)
+		return ip, fmt.Errorf("cannot get Public IP address CreateOrUpdate method response: %v", err)
 	}
 
 	return future.Result(ipClient)
@@ -111,12 +111,12 @@ func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) 
 	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), *nic)
 
 	if err != nil {
-		return fmt.Errorf("Cannot update NIC for Node %s: %v", vmName, err)
+		return fmt.Errorf("cannot update NIC for Node %s: %v", vmName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, nicClient.Client)
 	if err != nil {
-		return fmt.Errorf("Cannot get NIC CreateOrUpdate response for Node %s: %v", vmName, err)
+		return fmt.Errorf("cannot get NIC CreateOrUpdate response for Node %s: %v", vmName, err)
 	}
 
 	log.Infof("NIC for Node %s successfully updated", vmName)
@@ -129,12 +129,12 @@ func DeletePublicIP(ctx context.Context, ipName string) error {
 	ipClient := getIPClient()
 	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
 	if err != nil {
-		return fmt.Errorf("Cannot delete Public IP address %s: %v", ipName, err)
+		return fmt.Errorf("cannot delete Public IP address %s: %v", ipName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, ipClient.Client)
 	if err != nil {
-		return fmt.Errorf("Cannot get public ip address %s CreateOrUpdate method's response: %v", ipName, err)
+		return fmt.Errorf("cannot get public ip address %s CreateOrUpdate method's response: %v", ipName, err)
 	}
 
 	log.Infof("IP %s successfully deleted", ipName)
@@ -147,7 +147,7 @@ func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	ipClient := getIPClient()
 	ipAddress, err := ipClient.Get(ctx, spDetails.ResourceGroup, GetPublicIPName(nodeName), "")
 	if err != nil {
-		return fmt.Errorf("Cannot get IP Address: %v", err)
+		return fmt.Errorf("cannot get IP Address: %v for Node %s", err, nodeName)
 	}
 
 	var nicName string
@@ -168,7 +168,7 @@ func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	nic, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicName, "")
 
 	if err != nil {
-		return fmt.Errorf("Cannot get NIC for Node %s: %v", nodeName, err)
+		return fmt.Errorf("cannot get NIC for Node %s, error: %v", nodeName, err)
 	}
 
 	// set its Public IP to nil
@@ -178,12 +178,12 @@ func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), nic)
 
 	if err != nil {
-		return fmt.Errorf("Cannot update NIC for Node %s: %v", nodeName, err)
+		return fmt.Errorf("cannot update NIC for Node %s, error: %v", nodeName, err)
 	}
 
 	err = future.WaitForCompletion(ctx, nicClient.Client)
 	if err != nil {
-		return fmt.Errorf("Cannot get NIC CreateOrUpdate response for Node %s: %v", nodeName, err)
+		return fmt.Errorf("cannot get NIC CreateOrUpdate response for Node %s, error: %v", nodeName, err)
 	}
 
 	// there is a chance that after the scale-in operation completes, the NIC will still be alive
@@ -192,12 +192,12 @@ func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	// to make sure NIC gets removed, we'll just call delete on its instance
 	futureDelete, err := nicClient.Delete(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID))
 	if err != nil {
-		return fmt.Errorf("Cannot delete NIC for Node %s: %v. NIC may have already been deleted", nodeName, err)
+		return fmt.Errorf("cannot delete NIC for Node %s, error: %v. NIC may have already been deleted", nodeName, err)
 	}
 
 	err = futureDelete.WaitForCompletion(ctx, nicClient.Client)
 	if err != nil {
-		return fmt.Errorf("Cannot get NIC Delete response for Node %s: %v. NIC may have already been deleted", nodeName, err)
+		return fmt.Errorf("cannot get NIC Delete response for Node %s:, error: %v. NIC may have already been deleted", nodeName, err)
 	}
 
 	return nil
