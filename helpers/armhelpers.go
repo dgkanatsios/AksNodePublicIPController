@@ -82,8 +82,15 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 	return &networkInterface, err
 }
 
+type IPUpdater interface {
+	CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error
+	DeletePublicIP(ctx context.Context, ipName string) error
+	DisassociatePublicIPForNode(ctx context.Context, nodeName string) error
+}
+type IPUpdate struct{}
+
 // CreateOrUpdateVMPulicIP will create a new Public IP and assign it to the Virtual Machine
-func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error {
+func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error {
 
 	log.Infof("Trying to get NIC from the VM %s", vmName)
 
@@ -125,7 +132,7 @@ func CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) 
 }
 
 // DeletePublicIP deletes the designated Public IP
-func DeletePublicIP(ctx context.Context, ipName string) error {
+func (*IPUpdate) DeletePublicIP(ctx context.Context, ipName string) error {
 	ipClient := getIPClient()
 	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
 	if err != nil {
@@ -143,7 +150,7 @@ func DeletePublicIP(ctx context.Context, ipName string) error {
 }
 
 // DisassociatePublicIPForNode will remove the Public IP address association from the VM's NIC
-func DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
+func (*IPUpdate) DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
 	ipClient := getIPClient()
 	ipAddress, err := ipClient.Get(ctx, spDetails.ResourceGroup, GetPublicIPName(nodeName), "")
 	if err != nil {

@@ -42,7 +42,7 @@ func main() {
 
 	sharedInformers := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
 
-	controller := NewNodeController(kubeClient, sharedInformers.Core().V1().Nodes())
+	controller := NewNodeController(kubeClient, sharedInformers.Core().V1().Nodes(), &helpers.IPUpdate{})
 
 	go sharedInformers.Start(stopCh)
 
