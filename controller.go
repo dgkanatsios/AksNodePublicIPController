@@ -56,12 +56,14 @@ type NodeController struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+
+	ipUpdater helpers.IPUpdater
 }
 
 // NewNodeController returns a new sample controller
 func NewNodeController(
 	kubeclientset kubernetes.Interface,
-	nodeInformer informercorev1.NodeInformer) *NodeController {
+	nodeInformer informercorev1.NodeInformer, ipARMUpdater helpers.IPUpdater) *NodeController {
 
 	// Create event broadcaster
 	// Add sample-controller types to the default Kubernetes Scheme so Events can be
@@ -78,6 +80,7 @@ func NewNodeController(
 		nodesSynced:   nodeInformer.Informer().HasSynced,
 		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes"),
 		recorder:      recorder,
+		ipUpdater:     ipARMUpdater,
 	}
 
 	log.Info("Setting up event handlers for Node-Public IP controller")
@@ -217,7 +220,7 @@ func (c *NodeController) syncHandler(key string) error {
 		// processing.
 		if errors.IsNotFound(err) {
 			runtime.HandleError(fmt.Errorf("Node '%s' in work queue no longer exists in Node-Public IP controller", name))
-			errDelete := deletePublicIPForNode(name)
+			errDelete := c.deletePublicIPForNode(name)
 			if errDelete != nil {
 				log.Infof("Error deleting IP for Node %s: %v", name, errDelete.Error())
 				return errDelete
@@ -232,7 +235,7 @@ func (c *NodeController) syncHandler(key string) error {
 	if !nodeHasPublicIP(node) {
 		//node does not have a Public IP
 		log.Infof("Node with name %s does not have a Public IP, trying to create one", node.Name)
-		err := helpers.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
+		err := c.ipUpdater.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
 		if err != nil {
 			runtime.HandleError(fmt.Errorf("Error in creating IP %s, for Node %s", err.Error(), node.Name))
 			c.recorder.Event(node, corev1.EventTypeWarning, errorCreatingIP, err.Error())
@@ -266,21 +269,21 @@ func (c *NodeController) handleObject(obj interface{}) {
 	c.enqueueNode(object)
 }
 
-func deletePublicIPForNode(nodeName string) error {
+func (c *NodeController) deletePublicIPForNode(nodeName string) error {
 	log.Infof("Node with name %s has been deleted, trying to delete its Public IP", nodeName)
-	err := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
+	err := c.ipUpdater.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
 
 	// there is a chance that NIC is still alive so IP Address is still associated and we'll get an error
 	// this is the error message:
 	// Failure sending request: StatusCode=0 -- Original Error: autorest/azure: Service returned an error. Status=400 Code="PublicIPAddressCannotBeDeleted" Message="Public IP address /subscriptions/XXX/resourceGroups/XXX/providers/Microsoft.Network/publicIPAddresses/XXX can not be deleted since it is still allocated
 	if err != nil && strings.Contains(err.Error(), `Code="PublicIPAddressCannotBeDeleted"`) {
 		// try to disassociate the Public IP
-		errDis := helpers.DisassociatePublicIPForNode(ctx, nodeName)
+		errDis := c.ipUpdater.DisassociatePublicIPForNode(ctx, nodeName)
 		if errDis != nil {
 			runtime.HandleError(fmt.Errorf("Cannot disassociate Public IP for node %s due to error %s", nodeName, errDis.Error()))
 		}
 		// regardless of whether we get an error in disassociating, we should try and delete the Public IP again
-		errDeleteIP := helpers.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
+		errDeleteIP := c.ipUpdater.DeletePublicIP(ctx, helpers.GetPublicIPName(nodeName))
 		if errDeleteIP != nil {
 			runtime.HandleError(fmt.Errorf("Could not delete Public IP for node %s due to error %s", nodeName, errDeleteIP.Error()))
 			return errDeleteIP
