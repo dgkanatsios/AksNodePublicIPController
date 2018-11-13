@@ -6,20 +6,20 @@
 
 # AksNodePublicIPController
 
-[Azure Kubernetes Service](https://azure.microsoft.com/en-us/services/kubernetes-service/) does not currently have a way to automatically assign Public IPs to worker nodes/virtual machines. This project aims to solve this problem by utilizing a custom Kubernetes controller (based on [sample-controller](https://github.com/kubernetes/sample-controller)) and using [Azure SDK for Go](https://docs.microsoft.com/en-us/go/azure/). The ID for the new Public IPs is always "ipconfig-" + name of the Node/Virtual Machine.
+[Azure Kubernetes Service](https://azure.microsoft.com/en-us/services/kubernetes-service/) does not currently have a way to automatically assign Public IPs to worker nodes/virtual machines. This project aims to solve this problem by utilizing a custom Kubernetes controller (based on [sample-controller](https://github.com/kubernetes/sample-controller)) and using [Azure SDK for Go](https://docs.microsoft.com/en-us/go/azure/). The ID for the new Public IPs is always "ipconfig-" + name of the Node/Virtual Machine. It also assigns a Kubernetes Label to the Node, with name "HasPublicIP" and value "true".
 
 ### Deployment
 
 If you have an RBAC enabled cluster, just run:
 
 ```bash
-kubectl create -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy.yaml
+kubectl create -f -n kube-system https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy.yaml
 ```
 
 else, run:
 
 ```bash
-kubectl create -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
+kubectl create -f -n kube-system https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
 ```
 
 ### Alternatives

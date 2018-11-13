@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,10 +19,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listercorev1 "k8s.io/client-go/listers/core/v1"
-
-	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -235,8 +235,19 @@ func (c *NodeController) syncHandler(key string) error {
 	if !nodeHasPublicIP(node) {
 		//node does not have a Public IP
 		log.Infof("Node with name %s does not have a Public IP, trying to create one", node.Name)
-		err := c.ipUpdater.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
-		if err != nil {
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := c.ipUpdater.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
+			if err != nil {
+				return err
+			}
+
+			err = c.setLabelToNode(node.Name)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if retryErr != nil {
 			runtime.HandleError(fmt.Errorf("Error in creating IP %s, for Node %s", err.Error(), node.Name))
 			c.recorder.Event(node, corev1.EventTypeWarning, errorCreatingIP, err.Error())
 			return nil
@@ -245,6 +256,22 @@ func (c *NodeController) syncHandler(key string) error {
 	}
 
 	//c.recorder.Event(node, corev1.EventTypeNormal, successSynced, messageResourceSynced)
+	return nil
+}
+
+func (c *NodeController) setLabelToNode(nodename string) error {
+	node, err := c.kubeclientset.CoreV1().Nodes().Get(nodename, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if node.Labels == nil {
+		node.Labels = make(map[string]string)
+	}
+	node.Labels["HasPublicIP"] = "true"
+	_, err = c.kubeclientset.CoreV1().Nodes().Update(node)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
