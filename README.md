@@ -14,12 +14,13 @@ If you have an RBAC enabled cluster, just run:
 
 ```bash
 kubectl create -n kube-system -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy.yaml
+# this gets created into *kube-system* namespace, feel free to change it on the deploy.yaml
 ```
 
 else, run:
 
 ```bash
-kubectl create -n kube-system -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
+kubectl create -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
 ```
 
 ### Alternatives
