@@ -23,7 +23,6 @@ spec:
         volumeMounts:
           - name: akssp
             mountPath: /akssp
-        resources: {}
       volumes:
         - name: akssp
           hostPath:

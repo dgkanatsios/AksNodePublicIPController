@@ -13,13 +13,13 @@
 If you have an RBAC enabled cluster, just run:
 
 ```bash
-kubectl create -f -n kube-system https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy.yaml
+kubectl create -n kube-system -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy.yaml
 ```
 
 else, run:
 
 ```bash
-kubectl create -f -n kube-system https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
+kubectl create -n kube-system -f https://raw.githubusercontent.com/dgkanatsios/AksNodePublicIPController/master/deploy-no-rbac.yaml
 ```
 
 ### Alternatives
