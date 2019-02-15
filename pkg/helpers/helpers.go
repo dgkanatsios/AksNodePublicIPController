@@ -57,13 +57,6 @@ func InitializeServicePrincipalDetails() error {
 
 	m := f.(map[string]interface{})
 
-	// fmt.Printf("%s\n", m["tenantId"])
-	// fmt.Printf("%s\n", m["subscriptionId"])
-	// fmt.Printf("%s\n", m["aadClientId"])
-	// fmt.Printf("%s\n", m["aadClientSecret"])
-	// fmt.Printf("%s\n", m["location"])
-	// fmt.Printf("%s\n", m["resourceGroup"])
-
 	spDetails = ServicePrincipalDetails{
 		TenantID:        m["tenantId"].(string),
 		SubscriptionID:  m["subscriptionId"].(string),

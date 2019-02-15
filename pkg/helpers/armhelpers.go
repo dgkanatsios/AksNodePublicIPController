@@ -7,33 +7,47 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-03-30/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
+
 	"github.com/Azure/go-autorest/autorest/to"
+
 	log "github.com/Sirupsen/logrus"
 )
 
-func getIPClient() network.PublicIPAddressesClient {
+func getIPClient() (*network.PublicIPAddressesClient, error) {
 	ipClient := network.NewPublicIPAddressesClient(spDetails.SubscriptionID)
-	auth, _ := GetResourceManagementAuthorizer()
+	auth, err := GetResourceManagementAuthorizer()
+	if err != nil {
+		return nil, fmt.Errorf("error in getIPClient %s", err.Error())
+	}
 	ipClient.Authorizer = auth
-	return ipClient
+	return &ipClient, nil
 }
 
-func getVMClient() compute.VirtualMachinesClient {
+func getVMClient() (*compute.VirtualMachinesClient, error) {
 	vmClient := compute.NewVirtualMachinesClient(spDetails.SubscriptionID)
-	auth, _ := GetResourceManagementAuthorizer()
+	auth, err := GetResourceManagementAuthorizer()
+	if err != nil {
+		return nil, fmt.Errorf("error in getVMClient %s", err.Error())
+	}
 	vmClient.Authorizer = auth
-	return vmClient
+	return &vmClient, nil
 }
 
-func getNicClient() network.InterfacesClient {
+func getNicClient() (*network.InterfacesClient, error) {
 	nicClient := network.NewInterfacesClient(spDetails.SubscriptionID)
-	auth, _ := GetResourceManagementAuthorizer()
+	auth, err := GetResourceManagementAuthorizer()
+	if err != nil {
+		return nil, fmt.Errorf("error in getNicClient %s", err.Error())
+	}
 	nicClient.Authorizer = auth
-	return nicClient
+	return &nicClient, nil
 }
 
-func createPublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddress, err error) {
-	ipClient := getIPClient()
+func createPublicIP(ctx context.Context, ipName string) (*network.PublicIPAddress, error) {
+	ipClient, err := getIPClient()
+	if err != nil {
+		return nil, err
+	}
 	future, err := ipClient.CreateOrUpdate(
 		ctx,
 		spDetails.ResourceGroup,
@@ -49,20 +63,31 @@ func createPublicIP(ctx context.Context, ipName string) (ip network.PublicIPAddr
 	)
 
 	if err != nil {
-		return ip, fmt.Errorf("cannot create Public IP address: %v", err)
+		return nil, fmt.Errorf("cannot create Public IP address: %v", err)
 	}
 
 	err = future.WaitForCompletion(ctx, ipClient.Client)
 	if err != nil {
-		return ip, fmt.Errorf("cannot get Public IP address CreateOrUpdate method response: %v", err)
+		return nil, fmt.Errorf("cannot get Public IP address CreateOrUpdate method response: %v", err)
 	}
 
-	return future.Result(ipClient)
+	ipAddr, err := future.Result(*ipClient)
+	if err != nil {
+		return nil, err
+	}
+	return &ipAddr, nil
 }
 
-func getVM(ctx context.Context, vmName string) (compute.VirtualMachine, error) {
-	vmClient := getVMClient()
-	return vmClient.Get(ctx, spDetails.ResourceGroup, vmName, compute.InstanceView)
+func getVM(ctx context.Context, vmName string) (*compute.VirtualMachine, error) {
+	vmClient, err := getVMClient()
+	if err != nil {
+		return nil, err
+	}
+	vm, err := vmClient.Get(ctx, spDetails.ResourceGroup, vmName, compute.InstanceView)
+	if err != nil {
+		return nil, err
+	}
+	return &vm, nil
 }
 
 func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface, error) {
@@ -71,12 +96,19 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 		return nil, err
 	}
 
+	if vm.NetworkProfile == nil || len(*vm.NetworkProfile.NetworkInterfaces) == 0 {
+		return nil, fmt.Errorf("Error. Network profile for VM %s is %v and len(vm.NetworkInterfaces)=%d", vmName, vm.NetworkProfile, len(*vm.NetworkProfile.NetworkInterfaces))
+	}
+
 	//this will be something like /subscriptions/6bd0e514-c783-4dac-92d2-6788744eee7a/resourceGroups/MC_akslala_akslala_westeurope/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-0
 	nicFullName := &(*vm.NetworkProfile.NetworkInterfaces)[0].ID
 
 	nicName := getResourceName(**nicFullName)
 
-	nicClient := getNicClient()
+	nicClient, err := getNicClient()
+	if err != nil {
+		return nil, err
+	}
 
 	networkInterface, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicName, "")
 	return &networkInterface, err
@@ -108,10 +140,13 @@ func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipN
 
 	log.Infof("Public IP for Node %s created", vmName)
 
-	// set this IP Adress to NIC's IP configuration
-	(*nic.IPConfigurations)[0].PublicIPAddress = &ip
+	// set this IP Address to NIC's IP configuration
+	(*nic.IPConfigurations)[0].PublicIPAddress = ip
 
-	nicClient := getNicClient()
+	nicClient, err := getNicClient()
+	if err != nil {
+		return err
+	}
 
 	log.Infof("Trying to assign the Public IP to the NIC for Node %s", vmName)
 
@@ -133,7 +168,10 @@ func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipN
 
 // DeletePublicIP deletes the designated Public IP
 func (*IPUpdate) DeletePublicIP(ctx context.Context, ipName string) error {
-	ipClient := getIPClient()
+	ipClient, err := getIPClient()
+	if err != nil {
+		return err
+	}
 	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
 	if err != nil {
 		return fmt.Errorf("cannot delete Public IP address %s: %v", ipName, err)
@@ -151,7 +189,10 @@ func (*IPUpdate) DeletePublicIP(ctx context.Context, ipName string) error {
 
 // DisassociatePublicIPForNode will remove the Public IP address association from the VM's NIC
 func (*IPUpdate) DisassociatePublicIPForNode(ctx context.Context, nodeName string) error {
-	ipClient := getIPClient()
+	ipClient, err := getIPClient()
+	if err != nil {
+		return err
+	}
 	ipAddress, err := ipClient.Get(ctx, spDetails.ResourceGroup, GetPublicIPName(nodeName), "")
 	if err != nil {
 		return fmt.Errorf("cannot get IP Address: %v for Node %s", err, nodeName)
@@ -169,7 +210,10 @@ func (*IPUpdate) DisassociatePublicIPForNode(ctx context.Context, nodeName strin
 		return nil
 	}
 
-	nicClient := getNicClient()
+	nicClient, err := getNicClient()
+	if err != nil {
+		return err
+	}
 
 	// get the NIC
 	nic, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicName, "")

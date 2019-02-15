@@ -8,12 +8,15 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	helpers "github.com/dgkanatsios/AksNodePublicIPController/helpers"
+	helpers "github.com/dgkanatsios/AksNodePublicIPController/pkg/helpers"
+
 	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -28,13 +31,8 @@ import (
 const controllerAgentName = "nodes-controller"
 
 const (
-	successSynced         = "Synced"
-	successCreatingIP     = "SuccessCreatingIP"
-	successDeletingIP     = "SuccessDeletingIP"
-	errResourceExists     = "ErrResourceExists"
-	messageResourceSynced = "Node synced successfully"
-	errorCreatingIP       = "ErrorCreatingIP"
-	errorDeletingIP       = "ErrorDeletingIP"
+	successCreatingIP = "SuccessCreatingIP"
+	errorCreatingIP   = "ErrorCreatingIP"
 )
 
 var ctx = context.Background()
@@ -240,7 +238,7 @@ func (c *NodeController) syncHandler(key string) error {
 			if err != nil {
 				return err
 			}
-
+			log.Infof("Trying to set Label to the Node %s", node.Name)
 			err = c.setLabelToNode(node.Name)
 			if err != nil {
 				return err

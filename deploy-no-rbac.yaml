@@ -22,6 +22,11 @@ spec:
         volumeMounts:
           - name: akssp
             mountPath: /akssp
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       volumes:
         - name: akssp
           hostPath:
