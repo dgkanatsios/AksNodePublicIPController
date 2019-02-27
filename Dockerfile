@@ -1,15 +1,14 @@
 #build stage
-FROM golang:1.10.3-alpine3.8 AS builder
+FROM golang:1.12-alpine3.9 AS builder
 RUN apk add --no-cache git
-WORKDIR /build
+WORKDIR /go/src/github.com/dgkanatsios/AksNodePublicIPController
 COPY . .
-RUN go get -d -v 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /build/app .
 
 #final stage
-FROM alpine:latest
+FROM alpine:3.9
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /build/app .
 CMD ["./app"]
-LABEL Name=aksnodepublicipcontroller Version=0.2.7
+LABEL Name=aksnodepublicipcontroller

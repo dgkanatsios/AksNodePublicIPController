@@ -11,15 +11,7 @@ import (
 )
 
 var (
-	// for service principal and device
-	//oauthConfig        *adal.OAuthConfig
-	armAuthorizer      autorest.Authorizer
-	batchAuthorizer    autorest.Authorizer
-	graphAuthorizer    autorest.Authorizer
-	keyvaultAuthorizer autorest.Authorizer
-
-	// for device
-	nativeClientID string
+	armAuthorizer autorest.Authorizer
 )
 
 // GetResourceManagementAuthorizer gets an OAuth token for managing resources using Service Principal credentials

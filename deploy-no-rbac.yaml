@@ -17,11 +17,16 @@ spec:
         run: aksnodepublicipcontroller
     spec:
       containers:
-      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.8
+      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.9
         name: aksnodepublicipcontroller
         volumeMounts:
           - name: akssp
             mountPath: /akssp
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       volumes:
         - name: akssp
           hostPath:
