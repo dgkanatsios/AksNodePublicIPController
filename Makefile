@@ -26,8 +26,9 @@ buildremotedev: clean test
 		docker system prune -f
 pushremotedev:
 		docker push $(REGISTRY)/$(PROJECT_NAME):$(TAG)
-test:
+gofmt:
 		go fmt ./...
+test:
 		golangci-lint run --config ./golangci.yml
 		$(GOTEST) -v ./...
 clean: 

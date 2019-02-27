@@ -31,6 +31,10 @@ steps:
   workingDirectory: '$(modulePath)'
   displayName: 'Download dep and run `dep ensure`'
 
-- script: go test -v ./...
+- script: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
+  workingDirectory: '$(modulePath)'
+  displayName: 'Download golangci'
+
+- script: make test
   workingDirectory: '$(modulePath)'
   displayName: 'Run tests'
