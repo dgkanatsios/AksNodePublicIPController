@@ -1,8 +1,9 @@
+[![Build Status](https://dev.azure.com/dgkanatsios/AksNodePublicIPController/_apis/build/status/AksNodePublicIPController-CI?branchName=master)](https://dev.azure.com/dgkanatsios/AksNodePublicIPController/_build/latest?definitionId=1&branchName=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dgkanatsios/AksNodePublicIPController)](https://goreportcard.com/report/github.com/dgkanatsios/AksNodePublicIPController)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 [![unofficial Google Analytics for GitHub](https://gaforgithub.azurewebsites.net/api?repo=AksNodePublicIPController)](https://github.com/dgkanatsios/gaforgithub)
-![](https://img.shields.io/badge/status-alpha-red.svg)
+![](https://img.shields.io/badge/status-beta-yellow.svg)
 
 # AksNodePublicIPController
 
