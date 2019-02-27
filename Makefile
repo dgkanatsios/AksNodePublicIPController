@@ -17,15 +17,17 @@ deps:
 buildremote: clean test
 		docker build -f ./Dockerfile -t $(REGISTRY)/$(PROJECT_NAME):$(VERSION) .
 		docker tag $(REGISTRY)/$(PROJECT_NAME):$(VERSION) $(REGISTRY)/$(PROJECT_NAME):latest
+		docker system prune -f
 pushremote:
 		docker push $(REGISTRY)/$(PROJECT_NAME):$(VERSION)
 		docker push $(REGISTRY)/$(PROJECT_NAME):latest
 buildremotedev: clean test
 		docker build -f ./Dockerfile -t $(REGISTRY)/$(PROJECT_NAME):$(TAG) .
+		docker system prune -f
 pushremotedev:
 		docker push $(REGISTRY)/$(PROJECT_NAME):$(TAG)
 test:
-		go fmt
+		go fmt ./...
 		golangci-lint run --config ./golangci.yml
 		$(GOTEST) -v ./...
 clean: 

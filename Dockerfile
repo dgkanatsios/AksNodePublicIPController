@@ -1,5 +1,5 @@
 #build stage
-FROM golang:1.11.5-alpine3.9 AS builder
+FROM golang:1.12-alpine3.9 AS builder
 RUN apk add --no-cache git
 WORKDIR /go/src/github.com/dgkanatsios/AksNodePublicIPController
 COPY . .

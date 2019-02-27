@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
-)
+) 
 
 const controllerAgentName = "nodes-controller"
 
