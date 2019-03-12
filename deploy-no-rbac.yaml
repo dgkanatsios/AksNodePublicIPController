@@ -6,7 +6,7 @@ metadata:
     run: aksnodepublicipcontroller
   name: aksnodepublicipcontroller
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       run: aksnodepublicipcontroller
@@ -17,7 +17,7 @@ spec:
         run: aksnodepublicipcontroller
     spec:
       containers:
-      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.9
+      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.10
         name: aksnodepublicipcontroller
         volumeMounts:
           - name: akssp

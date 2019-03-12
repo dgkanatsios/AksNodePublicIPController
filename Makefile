@@ -4,7 +4,7 @@ GOBUILD=CGO_ENABLED=0 GOOS=linux $(GOCMD) build -a -installsuffix cgo
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-VERSION=0.2.9
+VERSION=0.2.10
 REGISTRY ?= docker.io/dgkanatsios
 PROJECT_NAME=aksnodepublicipcontroller
 

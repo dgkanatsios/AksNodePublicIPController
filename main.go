@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"strings"
@@ -67,8 +68,6 @@ func main() {
 		namespace = metav1.NamespaceDefault
 	}
 
-	// use a client that will stop allowing new requests once the context ends
-	//config.Wrap(transport.ContextCanceller(ctx, fmt.Errorf("the leader is shutting down")))
 	kubeClient := kubernetes.NewForConfigOrDie(config)
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -93,16 +92,16 @@ func main() {
 	}
 
 	// start the leader election code loop
-	leaderelection.RunOrDie(leaderelection.LeaderElectionConfig{
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 		Lock:          lock,
 		LeaseDuration: 60 * time.Second,
 		RenewDeadline: 15 * time.Second,
 		RetryPeriod:   5 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(_ <-chan struct{}) {
+			OnStartedLeading: func(_ context.Context) {
 				// we're notified when we start - this is where you would
 				// usually put your code
-				log.Printf("%s: leading", id)
+				log.Printf("%s: leading - leader election", id)
 				sharedInformers := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
 
 				controller := NewNodeController(kubeClient, sharedInformers.Core().V1().Nodes(), &helpers.IPUpdate{})
@@ -116,7 +115,7 @@ func main() {
 			OnStoppedLeading: func() {
 				// we can do cleanup here, or after the RunOrDie method
 				// returns
-				log.Printf("%s: lost", id)
+				log.Printf("%s: lost - leader election", id)
 			},
 		},
 	})
@@ -129,7 +128,7 @@ func main() {
 
 	// we no longer hold the lease, so perform any cleanup and then
 	// exit
-	log.Printf("%s: done", id)
+	log.Printf("%s: done - leader election", id)
 }
 
 func init() {
