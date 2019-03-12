@@ -38,7 +38,7 @@ spec:
     spec:
       serviceAccountName: aksnodepublicipcontroller-sa
       containers:
-      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.10
+      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.12
         name: aksnodepublicipcontroller
         volumeMounts:
           - name: akssp

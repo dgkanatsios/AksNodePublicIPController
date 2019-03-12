@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 // ServicePrincipalDetails contains the Service Principal credentials for the AKS cluster
@@ -41,6 +42,18 @@ var spDetails ServicePrincipalDetails
 // InitializeServicePrincipalDetails reads the /etc/kubernetes/azure.json file on the host (mounted via hostPath on the Pod)
 // this files contains the credentials for the AKS cluster's Service Principal
 func InitializeServicePrincipalDetails() error {
+
+	if os.Getenv("TENANT_ID") != "" && os.Getenv("SUBSCRIPTION_ID") != "" && os.Getenv("AAD_CLIENT_ID") != "" && os.Getenv("AAD_CLIENT_SECRET") != "" && os.Getenv("LOCATION") != "" && os.Getenv("RESOURCE_GROUP") != "" {
+		spDetails = ServicePrincipalDetails{
+			TenantID:        os.Getenv("TENANT_ID"),
+			SubscriptionID:  os.Getenv("SUBSCRIPTION_ID"),
+			AadClientID:     os.Getenv("AAD_CLIENT_ID"),
+			AadClientSecret: os.Getenv("AAD_CLIENT_SECRET"),
+			Location:        os.Getenv("LOCATION"),
+			ResourceGroup:   os.Getenv("RESOURCE_GROUP"),
+		}
+		return nil
+	}
 
 	file, e := ioutil.ReadFile("/akssp/azure.json")
 	if e != nil {

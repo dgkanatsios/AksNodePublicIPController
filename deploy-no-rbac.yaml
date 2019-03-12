@@ -17,7 +17,7 @@ spec:
         run: aksnodepublicipcontroller
     spec:
       containers:
-      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.10
+      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.11
         name: aksnodepublicipcontroller
         volumeMounts:
           - name: akssp

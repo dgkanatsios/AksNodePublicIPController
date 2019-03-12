@@ -236,6 +236,7 @@ func (c *NodeController) syncHandler(key string) error {
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			err := c.ipUpdater.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
 			if err != nil {
+				log.Errorf("Error in creating Public IP: %s", err)
 				return err
 			}
 			log.Infof("Trying to set Label to the Node %s", node.Name)

@@ -84,26 +84,33 @@ func getVM(ctx context.Context, vmName string) (*compute.VirtualMachine, error) 
 		return nil, err
 	}
 	vm, err := vmClient.Get(ctx, spDetails.ResourceGroup, vmName, compute.InstanceView)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &vm, nil
 }
 
 func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface, error) {
+	log.Infof("Trying to get VM with name %s", vmName)
 	vm, err := getVM(ctx, vmName)
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("Gotten VM with name %s", vmName)
 
 	if vm.NetworkProfile == nil || len(*vm.NetworkProfile.NetworkInterfaces) == 0 {
 		return nil, fmt.Errorf("Error. Network profile for VM %s is %v and len(vm.NetworkInterfaces)=%d", vmName, vm.NetworkProfile, len(*vm.NetworkProfile.NetworkInterfaces))
 	}
 
-	//this will be something like /subscriptions/6bd0e514-c783-4dac-92d2-6788744eee7a/resourceGroups/MC_akslala_akslala_westeurope/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-0
-	nicFullName := &(*vm.NetworkProfile.NetworkInterfaces)[0].ID
+	// let's get the first NIC
+	// this will be something like /subscriptions/6bd0e514-c783-4dac-92d2-6788744eee7a/resourceGroups/MC_akslala_akslala_westeurope/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-0
+	nicFullName := (*vm.NetworkProfile.NetworkInterfaces)[0].ID
 
-	nicName := getResourceName(**nicFullName)
+	log.Infof("NICFullName is %s", *nicFullName)
+
+	nicName := getResourceName(*nicFullName)
 
 	nicClient, err := getNicClient()
 	if err != nil {
@@ -130,6 +137,8 @@ func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipN
 	if err != nil {
 		return fmt.Errorf("cannot get network interface: %v", err)
 	}
+
+	log.Info("NIC gotten successfully")
 
 	log.Infof("Trying to create the Public IP for Node %s", vmName)
 
